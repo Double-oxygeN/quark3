@@ -1,0 +1,382 @@
+{
+  "uD": {
+    "name": "π+",
+    "mass": 140
+  },
+  "dU": {
+    "name": "π-",
+    "mass": 140
+  },
+  "uU": {
+    "name": "π0",
+    "mass": 135
+  },
+  "dD": {
+    "name": "π0",
+    "mass": 135
+  },
+  "cC": {
+    "name": "J/Ψ",
+    "mass": 3097
+  },
+  "cD": {
+    "name": "D+",
+    "mass": 1870
+  },
+  "cU": {
+    "name": "D0",
+    "mass": 1865
+  },
+  "uC": {
+    "name": "_D0",
+    "mass": 1865
+  },
+  "dC": {
+    "name": "D-",
+    "mass": 1870
+  },
+  "sS": {
+    "name": "φ",
+    "mass": 1019
+  },
+  "uS": {
+    "name": "K+",
+    "mass": 494
+  },
+  "dS": {
+    "name": "K0",
+    "mass": 498
+  },
+  "sD": {
+    "name": "_K0",
+    "mass": 498
+  },
+  "sU": {
+    "name": "K-",
+    "mass": 494
+  },
+  "cS": {
+    "name": "Ds+",
+    "mass": 1968
+  },
+  "sC": {
+    "name": "Ds-",
+    "mass": 1968
+  },
+  "bB": {
+    "name": "Υ",
+    "mass": 9460
+  },
+  "uB": {
+    "name": "B+",
+    "mass": 5279
+  },
+  "dB": {
+    "name": "B0",
+    "mass": 5280
+  },
+  "cB": {
+    "name": "Bc+",
+    "mass": 6277
+  },
+  "sB": {
+    "name": "Bs0",
+    "mass": 5366
+  },
+  "bS": {
+    "name": "_Bs0",
+    "mass": 5366
+  },
+  "bC": {
+    "name": "Bc-",
+    "mass": 6277
+  },
+  "bD": {
+    "name": "_B0",
+    "mass": 5280
+  },
+  "bU": {
+    "name": "B-",
+    "mass": 5279
+  },
+  "uuu": {
+    "name": "Δ++",
+    "mass": 1232
+  },
+  "uud": {
+    "name": "p",
+    "mass": 938
+  },
+  "udd": {
+    "name": "n",
+    "mass": 940
+  },
+  "ddd": {
+    "name": "Δ-",
+    "mass": 1232
+  },
+  "uus": {
+    "name": "Σ+",
+    "mass": 1189
+  },
+  "uds": {
+    "name": "Λ0",
+    "mass": 1116
+  },
+  "dds": {
+    "name": "Σ-",
+    "mass": 1197
+  },
+  "uss": {
+    "name": "Ξ0",
+    "mass": 1315
+  },
+  "dss": {
+    "name": "Ξ-",
+    "mass": 1322
+  },
+  "sss": {
+    "name": "Ω-",
+    "mass": 1672
+  },
+  "uuc": {
+    "name": "Σc++",
+    "mass": 2454
+  },
+  "udc": {
+    "name": "Λc+",
+    "mass": 2286
+  },
+  "ddc": {
+    "name": "Σc0",
+    "mass": 2454
+  },
+  "usc": {
+    "name": "Ξc+",
+    "mass": 2468
+  },
+  "dsc": {
+    "name": "Ξc0",
+    "mass": 2471
+  },
+  "ssc": {
+    "name": "Ωc0",
+    "mass": 2695
+  },
+  "ucc": {
+    "name": "Ξcc++",
+    "mass": 3515
+  },
+  "dcc": {
+    "name": "Ξcc+",
+    "mass": 3519
+  },
+  "scc": {
+    "name": "Ωcc+",
+    "mass": 3700
+  },
+  "ccc": {
+    "name": "Ωccc++",
+    "mass": 5000
+  },
+  "uub": {
+    "name": "Σb+",
+    "mass": 5808
+  },
+  "udb": {
+    "name": "Λb0",
+    "mass": 5620
+  },
+  "ddb": {
+    "name": "Σb-",
+    "mass": 5815
+  },
+  "usb": {
+    "name": "Ξb0",
+    "mass": 5785
+  },
+  "dsb": {
+    "name": "Ξb-",
+    "mass": 5791
+  },
+  "ssb": {
+    "name": "Ωb-",
+    "mass": 6165
+  },
+  "ucb": {
+    "name": "Ξcb+",
+    "mass": 6800
+  },
+  "dcb": {
+    "name": "Ξcb0",
+    "mass": 6800
+  },
+  "scb": {
+    "name": "Ωcb0",
+    "mass": 7200
+  },
+  "ccb": {
+    "name": "Ωccb+",
+    "mass": 8200
+  },
+  "ubb": {
+    "name": "Ξbb0",
+    "mass": 10100
+  },
+  "dbb": {
+    "name": "Ξbb-",
+    "mass": 10100
+  },
+  "sbb": {
+    "name": "Ωbb-",
+    "mass": 10500
+  },
+  "cbb": {
+    "name": "Ωcbb0",
+    "mass": 11500
+  },
+  "bbb": {
+    "name": "Ωbbb-",
+    "mass": 15000
+  },
+  "UUU": {
+    "name": "_Δ++",
+    "mass": 1232
+  },
+  "UUD": {
+    "name": "_p",
+    "mass": 938
+  },
+  "UDD": {
+    "name": "_n",
+    "mass": 940
+  },
+  "DDD": {
+    "name": "_Δ-",
+    "mass": 1232
+  },
+  "UUS": {
+    "name": "_Σ+",
+    "mass": 1189
+  },
+  "UDS": {
+    "name": "_Λ0",
+    "mass": 1116
+  },
+  "DDS": {
+    "name": "_Σ-",
+    "mass": 1197
+  },
+  "USS": {
+    "name": "_Ξ0",
+    "mass": 1315
+  },
+  "DSS": {
+    "name": "_Ξ-",
+    "mass": 1322
+  },
+  "SSS": {
+    "name": "_Ω-",
+    "mass": 1672
+  },
+  "UUC": {
+    "name": "_Σc++",
+    "mass": 2454
+  },
+  "UDC": {
+    "name": "_Λc+",
+    "mass": 2286
+  },
+  "DDC": {
+    "name": "_Σc0",
+    "mass": 2454
+  },
+  "USC": {
+    "name": "_Ξc+",
+    "mass": 2468
+  },
+  "DSC": {
+    "name": "_Ξc0",
+    "mass": 2471
+  },
+  "SSC": {
+    "name": "_Ωc0",
+    "mass": 2695
+  },
+  "UCC": {
+    "name": "_Ξcc++",
+    "mass": 3515
+  },
+  "DCC": {
+    "name": "_Ξcc+",
+    "mass": 3519
+  },
+  "SCC": {
+    "name": "_Ωcc+",
+    "mass": 3700
+  },
+  "CCC": {
+    "name": "_Ωccc++",
+    "mass": 5000
+  },
+  "UUB": {
+    "name": "_Σb+",
+    "mass": 5808
+  },
+  "UDB": {
+    "name": "_Λb0",
+    "mass": 5620
+  },
+  "DDB": {
+    "name": "_Σb-",
+    "mass": 5815
+  },
+  "USB": {
+    "name": "_Ξb0",
+    "mass": 5785
+  },
+  "DSB": {
+    "name": "_Ξb-",
+    "mass": 5791
+  },
+  "SSB": {
+    "name": "_Ωb-",
+    "mass": 6165
+  },
+  "UCB": {
+    "name": "_Ξcb+",
+    "mass": 6800
+  },
+  "DCB": {
+    "name": "_Ξcb0",
+    "mass": 6800
+  },
+  "SCB": {
+    "name": "_Ωcb0",
+    "mass": 7200
+  },
+  "CCB": {
+    "name": "_Ωccb+",
+    "mass": 8200
+  },
+  "UBB": {
+    "name": "_Ξbb0",
+    "mass": 10100
+  },
+  "DBB": {
+    "name": "_Ξbb-",
+    "mass": 10100
+  },
+  "SBB": {
+    "name": "_Ωbb-",
+    "mass": 10500
+  },
+  "CBB": {
+    "name": "_Ωcbb0",
+    "mass": 11500
+  },
+  "BBB": {
+    "name": "_Ωbbb-",
+    "mass": 15000
+  }
+}
