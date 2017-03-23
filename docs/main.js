@@ -6,8 +6,8 @@ const pntr = M_IO.getElementById('canvas').bind(canvas =>
 /* initStates :: IO IMap */
 const initStates = M_IO.unit(new IMap({
   titleCursor: 0,
-  stage_p1: Stage.init(48, 128, Ex.repeatedly(Quark.getRandomNext, 4)),
-  stage_p2: Stage.init(560, 128, Ex.repeatedly(Quark.getRandomNext, 4)),
+  stage_p1: Stage.init(Ex.repeatedly(Quark.randomNext, 4)),
+  stage_p2: Stage.init(Ex.repeatedly(Quark.randomNext, 4)),
   send_anti_p1: 0,
   send_anti_p2: 0
 }));
@@ -25,10 +25,10 @@ const createScenes = Keyboard.listen().bind(key =>
               } else if (keyDown) {
                 return M_IO.unit(s.set({ titleCursor: (s.get('titleCursor') === 2) ? 0 : 2 }));
               } else if (spaceKey) {
-                let random_nexts = Ex.repeatedly(Quark.getRandomNext, 4);
+                let random_nexts = Ex.repeatedly(Quark.randomNext, 4);
                 return M_IO.unit(s.set({
-                  stage_p1: Stage.init(48, 128, random_nexts),
-                  stage_p2: Stage.init(560, 128, random_nexts),
+                  stage_p1: Stage.init(random_nexts),
+                  stage_p2: Stage.init(random_nexts),
                   send_anti_p1: 0,
                   send_anti_p2: 0
                 }));
@@ -69,27 +69,25 @@ const createScenes = Keyboard.listen().bind(key =>
     })
 
     .addScene('play', (states, counters) => {
-      if (counters[1] < 180) {
-        return new Tuple(states, M_IO.unit(Transition.Stay()));
-      } else if (counters[1] >= 180 + 60 * 123) {
+      if (counters[1] >= 180 + 60 * 123) {
         return new Tuple(states, M_IO.unit(Transition.Trans('result', 0, StdTransFunc.push(90, StdTransFunc.DIRECTIONS.UP, Tween.ease(Tween.inout(Tween.back))))));
       } else if (counters[1] < 180 + 60 * 120) {
         let nextStates = states.bind(s =>
-          M_IO.unit(COM.receiveCommand(s.get('stage_p2').hand[1])).bind(command =>
+          M_IO.unit(COM.receiveCommand(s.get('stage_p2').handPos[1])).bind(command =>
             key.isPressed('ArrowLeft').bind(keyLeft =>
               key.isPressed('ArrowRight').bind(keyRight =>
                 key.isDown('ArrowDown').bind(keyDown =>
                   key.isPressed('KeyZ').bind(keyZ =>
                     key.isPressed('KeyX').bind(keyX =>
                       M_IO.unit([
-                        s.get('stage_p1').nextStageState(keyLeft ? -1 : (keyRight ? 1 : 0), keyDown ? 1 : 0, keyZ ? 1 : (keyX ? -1 : 0), s.get('send_anti_p2')),
-                        s.get('stage_p2').nextStageState((command === 1) ? -1 : ((command === 2) ? 1 : 0), (command === 5) ? 1 : 0, (command === 3) ? 1 : ((command === 4) ? -1 : 0), s.get('send_anti_p1'))
+                        s.get('stage_p1').nextStageState((keyLeft ? Stage.DIRECTIONS.LEFT : (keyRight ? Stage.DIRECTIONS.RIGHT : 0)) + (keyDown ? Stage.DIRECTIONS.DOWN : 0), keyZ ? Stage.DIRECTIONS.LEFT : (keyX ? Stage.DIRECTIONS.RIGHT : 0), s.get('send_anti_p2')),
+                        s.get('stage_p2').nextStageState(((command === 1) ? Stage.DIRECTIONS.LEFT : ((command === 2) ? Stage.DIRECTIONS.RIGHT : 0)) + ((command === 5) ? Stage.DIRECTIONS.DOWN : 0), (command === 3) ? Stage.DIRECTIONS.LEFT : ((command === 4) ? Stage.DIRECTIONS.RIGHT : 0), s.get('send_anti_p1'))
                       ]).bind(nextStages =>
                         M_IO.unit(s.set({
                           stage_p1: nextStages[0],
                           stage_p2: nextStages[1],
-                          send_anti_p1: nextStages[0].sendAntiquarks,
-                          send_anti_p2: nextStages[1].sendAntiquarks
+                          send_anti_p1: s.get('stage_p1').sendAntiquarks,
+                          send_anti_p2: s.get('stage_p2').sendAntiquarks
                         }))))))))));
         return new Tuple(nextStates, M_IO.unit(Transition.Stay()));
       } else {
@@ -129,19 +127,19 @@ const createScenes = Keyboard.listen().bind(key =>
               return painter.text(min.toString(10) + ":" + ("0" + sec.toString(10)).slice(-2), 400, 324, { size: 36, baseline: 'middle' }).fill(Color.HSL(160, 40, 20).toHex());
             }
           }).bind(_ =>
-            s.get('stage_p1').showBoard(painter)).bind(_ =>
-            s.get('stage_p1').showHand(painter)).bind(_ =>
-            s.get('stage_p1').showNext(painter, 266, 160)).bind(_ =>
+            s.get('stage_p1').showBoard(painter)(48, 128)).bind(_ =>
+            s.get('stage_p1').showHand(painter)(48, 128)).bind(_ =>
+            s.get('stage_p1').showNext(painter)(266, 160)).bind(_ =>
             painter.text(s.get('stage_p1').score.toString(10) + " MeV", 464, 428, { font: 'Spicy Rice', size: 32, align: 'right', baseline: 'middle' })
             .fill(Color.HSL(160, 40, 20).toHex())).bind(_ =>
-            s.get('stage_p2').showBoard(painter)).bind(_ =>
-            s.get('stage_p2').showHand(painter)).bind(_ =>
-            s.get('stage_p2').showNext(painter, 470, 160)).bind(_ =>
+            s.get('stage_p2').showBoard(painter)(560, 128)).bind(_ =>
+            s.get('stage_p2').showHand(painter)(560, 128)).bind(_ =>
+            s.get('stage_p2').showNext(painter)(470, 160)).bind(_ =>
             painter.text(s.get('stage_p2').score.toString(10) + " MeV", 529, 492, { font: 'Spicy Rice', size: 32, align: 'right', baseline: 'middle' })
             .fill(Color.HSL(160, 40, 20).toHex())).bind(_ =>
-            painter.text(s.get('stage_p1').receivedAntiquarks.toString(10), 144, 108, { font: 'Spicy Rice', size: 32, align: 'center', baseline: 'alphabetic' })
+            painter.text(s.get('stage_p1').antiQuarksNum.toString(10), 144, 108, { font: 'Spicy Rice', size: 32, align: 'center', baseline: 'alphabetic' })
             .outlined(Color.HSL(160, 40, 20).toHex(), Color.HSL(160, 20, 100).toHex(), 2)).bind(_ =>
-            painter.text(s.get('stage_p2').receivedAntiquarks.toString(10), 656, 108, { font: 'Spicy Rice', size: 32, align: 'center', baseline: 'alphabetic' })
+            painter.text(s.get('stage_p2').antiQuarksNum.toString(10), 656, 108, { font: 'Spicy Rice', size: 32, align: 'center', baseline: 'alphabetic' })
             .outlined(Color.HSL(160, 40, 20).toHex(), Color.HSL(0, 0, 100).toHex(), 2)).bind(_ =>
             painter.show())));
     })

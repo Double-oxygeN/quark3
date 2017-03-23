@@ -1,93 +1,159 @@
-let HADRONS;
-const xhr = new XMLHttpRequest();
-xhr.onreadystatechange = function () {
-  if (xhr.readyState === 4) {
-    HADRONS = JSON.parse(xhr.responseText);
-    console.log(HADRONS);
+class Phase {
+  constructor(data) {
+    this.data = data;
   }
-};
-xhr.open("GET", "./resources/hadrons.json");
-xhr.send();
 
+  /* Wait Int */
+  static Wait(counter) {
+    return new Phase((pattern) => pattern.wait(counter));
+  }
+
+  /* Move */
+  static Move() {
+    return new Phase((pattern) => pattern.move());
+  }
+
+  /* Turn Direction Int */
+  static Turn(direction, counter) {
+    return new Phase((pattern) => pattern.turn(direction, counter));
+  }
+
+  /* Land Int */
+  static Land(counter) {
+    return new Phase((pattern) => pattern.land(counter));
+  }
+
+  /* Clear [([Int], Maybe Hadron)] Int */
+  static Clear(clearQuarks, counter) {
+    return new Phase((pattern) => pattern.clear(clearQuarks, counter));
+  }
+
+  /* Fall Int Int */
+  static Fall(fallDistance, fallSpeed) {
+    return new Phase((pattern) => pattern.fall(fallDistance, fallSpeed));
+  }
+
+  match(pattern) {
+    return this.data(pattern);
+  }
+}
+
+const STAGE_WIDTH = 6;
+const STAGE_HEIGHT = 14;
+const DROP_SPEED = 0.02;
+const FALL_ACCELERATION = 0.0098;
 class Stage {
-  constructor(x, y, w, h, nexts, board, hand, land_counter, fall_distance, fall_speed, clear_counter, score, chain, received_antiquarks, send_antiquarks) {
-    this.x = x;
-    this.y = y;
-    this.width = w; // :: Int
-    this.height = h; // :: Int
-    this.nexts = nexts; // :: [[Quark]]
-    this.board = board; // :: [[Maybe Quark]]
-    this.hand = hand; // :: [Float]
-    this.landCounter = land_counter; // :: Int
-    this.fallDistance = fall_distance; // :: Float
-    this.fallSpeed = fall_speed; // :: Maybe Float
-    this.clearCounter = clear_counter; // :: Int
-    this.score = score; // :: Int
-    this.chain = chain; // :: Int
-    this.receivedAntiquarks = received_antiquarks; // :: Int
-    this.sendAntiquarks = send_antiquarks; // :: Int
+  /* Stage [[Maybe Quark]] [[Quark]] [Float] Phase Int */
+  constructor(board, nexts, handPos, phase, score, chain, anti_quarks_num, send_anti_quarks) {
+    this.board = board;
+    this.nexts = nexts;
+    this.handPos = handPos;
+    this.phase = phase;
+    this.score = score;
+    this.chain = chain;
+    this.antiQuarksNum = anti_quarks_num;
+    this.sendAntiquarks = send_anti_quarks;
   }
 
-  /* init :: [[Quark]] -> Stage */
-  static init(x, y, nexts) {
-    return new Stage(x, y, 6, 14, nexts, Ex.repeatedly(() => Ex.repeatedly(M_Maybe.Nothing, 14), 6), [2, 0], 0, 0, M_Maybe.Nothing(), 0, 0, 0, 0, 0);
+  static get DIRECTIONS() {
+    return {
+      LEFT: -1,
+      NONE: 0,
+      RIGHT: 1,
+      LEFTDOWN: 2,
+      DOWN: 3,
+      RIGHTDOWN: 4
+    };
   }
 
-  /* showBoard :: Stage -> Painter2d -> IO () */
-  showBoard(painter) {
-    let blanks = this.blanks,
-      clears = this.clears,
-      isAboveBlanks = (col, row) => blanks.some(bl => bl[0] === col) && blanks.filter(bl => bl[0] === col)[0][1] > row,
-      getClearGroup = (col, row) => clears.filter(q => q.del.some(pos => pos[0] === col && pos[1] === row));
-    return painter.rect(this.x, this.y, this.width * 32, (this.height - 2) * 32)
-      .clip(this.board.map((column, colNum) => column.map((q, rowNum) => q.match({
-        nothing: () => M_IO.unit(),
-        just: (quark) => {
-          let clearGroup = getClearGroup(colNum, rowNum);
-          if (isAboveBlanks(colNum, rowNum)) {
-            return quark.show(painter, this.x + colNum * 32, this.y + (rowNum - 2 + this.fallDistance) * 32);
-          } else if (clearGroup.length > 0 && this.clearCounter > 0) {
-            let ease2 = Tween.ease(Tween.in(Tween.quad))(this.clearCounter, 1, -1, 30);
-            return painter.globalAlpha(ease2)(quark.show(painter, this.x + colNum * 32, this.y + (rowNum - 2) * 32)).bind(_ =>
-              (clearGroup[0].del[0][0] === colNum && clearGroup[0].del[0][1] === rowNum) ?
-              painter.text(clearGroup[0].name, this.x + colNum * 32 + 16, this.y + (rowNum - 2) * 32 + 16, { font: 'Fira Sans', size: 28, align: 'center', baseline: 'middle' })
-              .fill(Color.HSL(0, 0, 0).toHex()) : M_IO.unit());
-          } else {
-            return quark.show(painter, this.x + colNum * 32, this.y + (rowNum - 2) * 32);
-          }
+  static init(nexts) {
+    let blankBoard = Ex.repeatedly(() => Ex.repeatedly(M_Maybe.Nothing, STAGE_HEIGHT), STAGE_WIDTH);
+    return new Stage(blankBoard, nexts, [2, 0], Phase.Wait(180), 0, 0, 0, 0);
+  }
+
+  /* nextHand :: [[Quark]] -> [[Quark]] */
+  static nextHand(old_nexts) {
+    return old_nexts.slice(1).concat([Quark.randomNext()]);
+  }
+
+  /* move :: [[Maybe Quark]] -> [Float] -> Direction -> [Float] */
+  static move(board) {
+    return (handPos) => (direction) => {
+      let exactYPos = Math.floor(handPos[1]);
+      if (direction === Stage.DIRECTIONS.LEFT || direction === Stage.DIRECTIONS.LEFTDOWN) {
+        if (handPos[0] === 0) {
+          return handPos;
+        } else if (Stage.isFill(board)(handPos[0] - 1, exactYPos) || Stage.isFill(board)(handPos[0] - 1, exactYPos + 1)) {
+          return handPos;
+        } else {
+          return [handPos[0] - 1, handPos[1]];
         }
-      })).reduce((a, b) => a.bind(_ => b))).reduce((a, b) => a.bind(_ => b)));
-  }
-
-  /* showHand :: Stage -> Painter2d -> IO () */
-  showHand(painter) {
-    return painter.rect(this.x, this.y, this.width * 32, (this.height - 2) * 32)
-      .clip(this.nexts[0].map((quark, num) => {
-        return quark.show(painter, this.x + 32 * (this.hand[0] + (num % 2)), this.y + 32 * (this.hand[1] + Math.floor(num / 2) - 2));
-      }).reduce((a, b) => a.bind(_ => b)));
-  }
-
-  /* showNext :: Stage -> (Painter2d, Int, Int) -> IO () */
-  showNext(painter, x, y) {
-    return this.nexts[1].map((quark, num) => {
-      return quark.show(painter, x + 32 * (num % 2), y + 32 * Math.floor(num / 2));
-    }).reduce((a, b) => a.bind(_ => b));
-  }
-
-  /* turnQuarks :: ([Quark], Int) -> [Quark] */
-  static turnQuarks(quarks, turn) {
-    if (turn === -1) {
-      return [quarks[2], quarks[0], quarks[3], quarks[1]];
-    } else if (turn === 1) {
-      return [quarks[1], quarks[3], quarks[0], quarks[2]];
-    } else {
-      return quarks;
+      } else if (direction === Stage.DIRECTIONS.RIGHT || direction === Stage.DIRECTIONS.RIGHTDOWN) {
+        if (handPos[0] === 4) {
+          return handPos;
+        } else if (Stage.isFill(board)(handPos[0] + 1, exactYPos) || Stage.isFill(board)(handPos[0] + 1, exactYPos + 1)) {
+          return handPos;
+        } else {
+          return [handPos[0] + 1, handPos[1]];
+        }
+      } else {
+        return handPos;
+      }
     }
   }
 
-  /* blanks :: [[Int]] */
-  get blanks() {
-    return this.board.map((column, x) => {
+  /* turnHand :: [[Quark]] -> Direction -> [[Quark]] */
+  static turnHand(nexts) {
+    return (direction) => {
+      if (direction === Stage.DIRECTIONS.LEFT) {
+        let hand = [[nexts[0][1], nexts[0][3], nexts[0][0], nexts[0][2]]];
+        return hand.concat(nexts.slice(1));
+      } else {
+        let hand = [[nexts[0][2], nexts[0][0], nexts[0][3], nexts[0][1]]];
+        return hand.concat(nexts.slice(1));
+      }
+    }
+  }
+
+  /* isFill :: [[Maybe Quark]] -> (Int, Int) -> Bool */
+  static isFill(board) {
+    return (x, y) => {
+      return board[x][y].match({
+        nothing: () => false,
+        just: (_) => true
+      });
+    };
+  }
+
+  /* isLand :: [[Maybe Quark]] -> [Float] -> Bool */
+  static isLand(board) {
+    return (handPos) => {
+      if (handPos[1] >= STAGE_HEIGHT - 2) {
+        return true;
+      } else if (Stage.isFill(board)(handPos[0], Math.floor(handPos[1]) + 2) || Stage.isFill(board)(handPos[0] + 1, Math.floor(handPos[1]) + 2)) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+
+  /* put :: [[Maybe Quark]] -> [Quark] -> [Float] -> [[Maybe Quark]] */
+  static put(board) {
+    return (hand) => (handPos) => {
+      let nextBoard = Ex.clone(board),
+        exactYPos = Math.floor(handPos[1]);
+      nextBoard[handPos[0]][exactYPos] = M_Maybe.Just(hand[0]);
+      nextBoard[handPos[0] + 1][exactYPos] = M_Maybe.Just(hand[1]);
+      nextBoard[handPos[0]][exactYPos + 1] = M_Maybe.Just(hand[2]);
+      nextBoard[handPos[0] + 1][exactYPos + 1] = M_Maybe.Just(hand[3]);
+      return nextBoard;
+    }
+  }
+
+  /* hasBlank :: [[Maybe Quark]] -> [[Int]] */
+  static getBlanks(board) {
+    return board.map((column, x) => {
       let flag = false;
       return column.map((q, y) => {
         return q.match({
@@ -101,192 +167,264 @@ class Stage {
     }).reduce((a, b) => a.concat(b));
   }
 
-  static getName(particles, defaultName) {
-    let sorted = particles.sort((a, b) => (a * b < 0) ? b - a : a - b),
-      hadron = HADRONS[sorted.map(v => Quark.getQuarkChar(v)).reduce((a, b) => a + b)] || {};
-    return ('name' in hadron) ? hadron.name : defaultName;
-  }
-
-  static getScore(particles, defaultScore) {
-    let sorted = particles.sort((a, b) => (a * b < 0) ? b - a : a - b),
-      hadron = HADRONS[sorted.map(v => Quark.getQuarkChar(v)).reduce((a, b) => a + b)] || {};
-    return ('mass' in hadron) ? hadron.mass : defaultScore;
-  }
-
-  /* clears :: [Object] */
-  get clears() {
-    return this.board.map((column, x) => column.map((q, y) => {
-      let clrs = [];
-      if (y < 2 || !this.isFill(x, y)) {
-        return clrs;
-      }
-      if (x < this.width - 1) {
-        if (0 < x) {
-          this.board[x - 1][y].map(a => q.map(b => this.board[x + 1][y].map(c => {
-            if ((a.colorCharge + b.colorCharge + c.colorCharge) % 21 === 0) {
-              clrs.push({
-                del: [[x, y], [x - 1, y], [x + 1, y]],
-                name: Stage.getName([a, b, c].map(n => n.particle), "?"),
-                point: Stage.getScore([a, b, c].map(n => n.particle), [a, b, c].map(n => n.mass).reduce((m, n) => m + n))
-              });
-            }
-          })));
-        }
-        q.map(a => this.board[x + 1][y].map(b => {
-          if ((a.colorCharge + b.colorCharge) % 21 === 0) {
-            clrs.push({
-              del: [[x, y], [x + 1, y]],
-              name: Stage.getName([a, b].map(n => n.particle), "?"),
-              point: Stage.getScore([a, b].map(n => n.particle), [a, b].map(n => n.mass).reduce((m, n) => m + n))
+  /* getHadrons :: [[Maybe Quark]] -> [([Int], Maybe Hadron)] */
+  static getHadrons(board) {
+    return board.map((column, x) => {
+      return column.map((q, y) => {
+        let hadrons = [];
+        if (y < 2) return [];
+        if (x < STAGE_WIDTH - 1) {
+          if (x > 0) {
+            board[x - 1][y].bind(a =>
+              board[x][y].bind(b =>
+                board[x + 1][y].bind(c =>
+                  Quark.compound([a, b, c], HADRON_TABLE)))).match({
+              nothing: () => null,
+              just: (hadron) => {
+                hadrons = hadrons.concat([[[x, y], M_Maybe.Just(hadron)], [[x - 1, y], M_Maybe.Nothing()], [[x + 1, y], M_Maybe.Nothing()]]);
+                return null;
+              }
             });
           }
-        }));
-      }
-      if (y < this.height - 1) {
-        if (2 < y) {
-          this.board[x][y - 1].map(a => q.map(b => this.board[x][y + 1].map(c => {
-            if ((a.colorCharge + b.colorCharge + c.colorCharge) % 21 === 0) {
-              clrs.push({
-                del: [[x, y], [x, y - 1], [x, y + 1]],
-                name: Stage.getName([a, b, c].map(n => n.particle), "?"),
-                point: Stage.getScore([a, b, c].map(n => n.particle), [a, b, c].map(n => n.mass).reduce((m, n) => m + n))
-              });
+          board[x][y].bind(a =>
+            board[x + 1][y].bind(b =>
+              Quark.compound([a, b], HADRON_TABLE))).match({
+            nothing: () => null,
+            just: (hadron) => {
+              hadrons = hadrons.concat([[[x, y], M_Maybe.Just(hadron)], [[x + 1, y], M_Maybe.Nothing()]]);
+              return null;
             }
-          })));
+          });
         }
-        q.map(a => this.board[x][y + 1].map(b => {
-          if ((a.colorCharge + b.colorCharge) % 21 === 0) {
-            clrs.push({
-              del: [[x, y], [x, y + 1]],
-              name: Stage.getName([a, b].map(n => n.particle), "?"),
-              point: Stage.getScore([a, b].map(n => n.particle), [a, b].map(n => n.mass).reduce((m, n) => m + n))
+        if (y < STAGE_HEIGHT - 1) {
+          if (y > 2) {
+            board[x][y - 1].bind(a =>
+              board[x][y].bind(b =>
+                board[x][y + 1].bind(c =>
+                  Quark.compound([a, b, c], HADRON_TABLE)))).match({
+              nothing: () => null,
+              just: (hadron) => {
+                hadrons = hadrons.concat([[[x, y], M_Maybe.Just(hadron)], [[x, y - 1], M_Maybe.Nothing()], [[x, y + 1], M_Maybe.Nothing()]]);
+                return null;
+              }
             });
           }
-        }));
-      }
-      return clrs;
-    }).reduce((a, b) => a.concat(b))).reduce((a, b) => a.concat(b));
+          board[x][y].bind(a =>
+            board[x][y + 1].bind(b =>
+              Quark.compound([a, b], HADRON_TABLE))).match({
+            nothing: () => null,
+            just: (hadron) => {
+              hadrons = hadrons.concat([[[x, y], M_Maybe.Just(hadron)], [[x, y + 1], M_Maybe.Nothing()]]);
+              return null;
+            }
+          });
+        }
+        return hadrons;
+      }).reduce((a, b) => a.concat(b));
+    }).reduce((a, b) => a.concat(b));
   }
 
-  /* nextStageState :: Stage -> (Int, Int, Int, Int) -> Stage */
-  nextStageState(horizontalMove, verticalMove, turn, r_anti) {
-    return this.fallSpeed.match({
-      nothing: () => {
-        let speed = 0.02,
-          nextHand = Ex.clone(this.hand),
-          l_counter,
-          nextNexts = [Stage.turnQuarks(this.nexts[0], turn)].concat(this.nexts.slice(1)),
-          nextBoard = Ex.clone(this.board),
-          fallSpeed = this.fallSpeed;
-
-        if (horizontalMove === -1) {
-          if (this.hand[0] === 0) {
-            nextHand[0] = 0;
-          } else if (this.isFill(this.hand[0] - 1, Math.floor(this.hand[1])) || this.isFill(this.hand[0] + -1, Math.floor(this.hand[1]) + 1)) {
-            nextHand[0] = this.hand[0];
-          } else {
-            nextHand[0] = this.hand[0] - 1;
-          }
-        } else if (horizontalMove === 1) {
-          if (this.hand[0] === 4) {
-            nextHand[0] = 4;
-          } else if (this.isFill(this.hand[0] + 2, Math.ceil(this.hand[1])) || this.isFill(this.hand[0] + 2, Math.ceil(this.hand[1]) + 1)) {
-            nextHand[0] = this.hand[0];
-          } else {
-            nextHand[0] = this.hand[0] + 1;
-          }
+  /* fall :: [[Quarks]] -> [[Int]] -> [[Quarks]] */
+  static fall(board) {
+    return (blanks) => {
+      return board.map((column, x) => {
+        let columnBlanks = blanks.filter(bl => bl[0] === x);
+        if (columnBlanks.length === 0) {
+          return column;
         } else {
-          nextHand[0] = this.hand[0];
+          return [M_Maybe.Nothing()].concat(column.filter((_, y) => y !== columnBlanks[0][1]));
         }
+      });
+    };
+  }
 
-        if (this.isLand()) {
-          nextHand[1] = this.hand[1];
-          l_counter = this.landCounter + 1 + verticalMove * 2;
-          if (l_counter >= 30) {
-            l_counter = 0;
-            nextBoard[nextHand[0]][Math.floor(nextHand[1])] = M_Maybe.unit(nextNexts[0][0]);
-            nextBoard[nextHand[0] + 1][Math.floor(nextHand[1])] = M_Maybe.unit(nextNexts[0][1]);
-            nextBoard[nextHand[0]][Math.floor(nextHand[1] + 1)] = M_Maybe.unit(nextNexts[0][2]);
-            nextBoard[nextHand[0] + 1][Math.floor(nextHand[1] + 1)] = M_Maybe.unit(nextNexts[0][3]);
-
-            fallSpeed = M_Maybe.Just(0);
-          }
+  /* nextStageState :: Stage -> (Direction, Int, Int) -> Stage */
+  nextStageState(move_direction, turn_direction, anti_quarks_num) {
+    return this.phase.match({
+      wait: (counter) => {
+        if (counter === 0) {
+          return new Stage(this.board, Stage.nextHand(this.nexts), this.handPos, Phase.Move(), this.score, 0, 0, 0);
         } else {
-          nextHand[1] = this.hand[1] + speed * (11 * verticalMove + 1);
-          l_counter = this.landCounter;
+          return new Stage(this.board, this.nexts, this.handPos, Phase.Wait(counter - 1), this.score, 0, 0, 0);
         }
-        return new Stage(this.x, this.y, this.width, this.height, nextNexts, nextBoard, nextHand, l_counter, 0, fallSpeed, 0, this.score, 0, this.receivedAntiquarks + r_anti, 0);
       },
-      just: (speed) => {
-        let nextFallDistance,
-          nextFallSpeed,
-          nextNexts = Ex.clone(this.nexts),
-          nextBoard = Ex.clone(this.board),
-          blanks = this.blanks,
-          clears = this.clears,
-          clearCounter = this.clearCounter,
-          score = this.score,
-          chain = this.chain,
-          receivedAntiquarks = this.receivedAntiquarks,
-          sendAntiquarks = 0;
-        const acceleration = 0.0098;
-
-        if (blanks.length > 0) {
-          nextFallSpeed = this.fallSpeed.map(x => x + acceleration);
-          nextFallDistance = this.fallDistance + speed;
-          while (nextFallDistance >= 1) {
-            nextFallDistance--;
-            nextBoard = this.board.map((column, x) =>
-              blanks.some(bl => bl[0] === x) ? [M_Maybe.Nothing()].concat(column.filter((_, idx) => idx !== blanks.filter(bl => bl[0] === x)[0][1])) : column);
+      move: () => {
+        let nextHandPos = Stage.move(this.board)(this.handPos)(move_direction);
+        nextHandPos[1] += (([Stage.DIRECTIONS.LEFTDOWN, Stage.DIRECTIONS.DOWN, Stage.DIRECTIONS.RIGHTDOWN].includes(move_direction)) ? 11 : 1) * DROP_SPEED;
+        if (turn_direction === 0) {
+          if (Stage.isLand(this.board)(nextHandPos)) {
+            return new Stage(this.board, this.nexts, nextHandPos, Phase.Land(30), this.score, 0, this.antiQuarksNum + anti_quarks_num, 0);
+          } else {
+            return new Stage(this.board, this.nexts, nextHandPos, Phase.Move(), this.score, 0, this.antiQuarksNum + anti_quarks_num, 0);
           }
         } else {
-          if (clears.length > 0) {
-            clearCounter++;
-            if (clearCounter >= 30) {
-              let clearQuarks = clears.map(clrs => clrs.del).reduce((a, b) => a.concat(b)),
-                plusScore = clears.map(clrs => clrs.point).reduce((a, b) => a + b, 0) * clears.length * (chain + 1);
-              clearQuarks.forEach(qPos => {
-                nextBoard[qPos[0]][qPos[1]] = M_Maybe.Nothing();
-              });
-              score += plusScore;
-              sendAntiquarks = Math.floor(plusScore / 5000);
-              chain++;
-              clearCounter = 0;
-            }
-            nextFallSpeed = M_Maybe.Just(0);
-            nextFallDistance = 0;
-          } else if (receivedAntiquarks > 0) {
-            let fallAntiquarksNum = (receivedAntiquarks > 12) ? 12 : receivedAntiquarks,
-              fallAntiquarks = Ex.shuffle(Ex.repeatedly(() => M_Maybe.Just(Quark.getRandomQuark().antiQuark()), fallAntiquarksNum)
-                .concat(Ex.repeatedly(M_Maybe.Nothing, 12)).slice(0, 12));
-            receivedAntiquarks -= fallAntiquarksNum;
-            fallAntiquarks.forEach((aq, num) => {
-              this.board[num % 6][Math.floor(num / 6)] = aq;
-            });
-            nextFallSpeed = M_Maybe.Just(0);
-            nextFallDistance = 0;
+          return new Stage(this.board, this.nexts, nextHandPos, Phase.Turn(turn_direction, 5), this.score, 0, this.antiQuarksNum + anti_quarks_num, 0);
+        }
+      },
+      turn: (direction, counter) => {
+        let nextHandPos = Stage.move(this.board)(this.handPos)(move_direction);
+        if (counter === 0) {
+          if (Stage.isLand(this.board)(this.handPos)) {
+            return new Stage(this.board, Stage.turnHand(this.nexts)(direction), nextHandPos, Phase.Land(20), this.score, 0, this.antiQuarksNum + anti_quarks_num, 0);
           } else {
-            nextFallSpeed = M_Maybe.Nothing();
-            nextFallDistance = 0;
-            nextNexts = this.nexts.slice(1).concat([Quark.getRandomNext()]);
-            chain = 0;
+            return new Stage(this.board, Stage.turnHand(this.nexts)(direction), nextHandPos, Phase.Move(), this.score, 0, this.antiQuarksNum + anti_quarks_num, 0);
+          }
+        } else {
+          return new Stage(this.board, this.nexts, nextHandPos, Phase.Turn(direction, counter - 1), this.score, 0, this.antiQuarksNum + anti_quarks_num, 0);
+        }
+      },
+      land: (counter) => {
+        let nextHandPos = Stage.move(this.board)(this.handPos)(move_direction);
+        if (counter === 0) {
+          return new Stage(Stage.put(this.board)(this.nexts[0])(this.handPos), this.nexts, nextHandPos, Phase.Fall(0, 0), this.score, 0, this.antiQuarksNum + anti_quarks_num, 0);
+        } else {
+          if (turn_direction === 0) {
+            if ([Stage.DIRECTIONS.LEFTDOWN, Stage.DIRECTIONS.DOWN, Stage.DIRECTIONS.RIGHTDOWN].includes(move_direction)) {
+              return new Stage(this.board, this.nexts, nextHandPos, Phase.Land(turn_direction, counter - 3), this.score, 0, this.antiQuarksNum + anti_quarks_num, 0);
+            } else {
+              return new Stage(this.board, this.nexts, nextHandPos, Phase.Land(turn_direction, counter - 1), this.score, 0, this.antiQuarksNum + anti_quarks_num, 0);
+            }
+          } else {
+            return new Stage(this.board, this.nexts, nextHandPos, Phase.Turn(turn_direction, 5), this.score, 0, this.antiQuarksNum + anti_quarks_num, 0);
           }
         }
-        return new Stage(this.x, this.y, this.width, this.height, nextNexts, nextBoard, [2, 0], 0, nextFallDistance, nextFallSpeed, clearCounter, score, chain, receivedAntiquarks + r_anti, sendAntiquarks);
+      },
+      clear: (clearQuarks, counter) => {
+        let nextBoard = Ex.clone(this.board),
+          plusScore = 0;
+        if (counter === 0) {
+          clearQuarks.forEach(q => {
+            nextBoard[q[0][0]][q[0][1]] = M_Maybe.Nothing();
+            q[1].match({
+              nothing: () => null,
+              just: (hadron) => {
+                plusScore += hadron.mass;
+                return null;
+              }
+            });
+          });
+          plusScore *= clearQuarks.length * (this.chain + 1);
+          return new Stage(nextBoard, this.nexts, [2, 0], Phase.Fall(0, 0), this.score + plusScore, this.chain + 1, this.antiQuarksNum + anti_quarks_num, Math.floor(plusScore / 5000));
+        } else {
+          return new Stage(this.board, this.nexts, [2, 0], Phase.Clear(clearQuarks, counter - 1), this.score, this.chain, this.antiQuarksNum + anti_quarks_num, 0);
+        }
+      },
+      fall: (fallDistance, fallSpeed) => {
+        let nextFallSpeed = fallSpeed + FALL_ACCELERATION,
+          nextFallDistance = fallDistance + nextFallSpeed,
+          nextBoard,
+          blanks = Stage.getBlanks(this.board);
+        if (nextFallDistance >= 1) {
+          nextFallDistance--;
+          nextBoard = Stage.fall(this.board)(blanks);
+        } else {
+          nextBoard = this.board;
+        }
+        if (blanks.length === 0) {
+          let hadrons = Stage.getHadrons(nextBoard);
+          if (hadrons.length === 0) {
+            if (this.antiQuarksNum > 0) {
+              let fallAntiquarksNum = (this.antiQuarksNum > 12) ? 12 : this.antiQuarksNum,
+                fallAntiquarks = Ex.shuffle(Ex.repeatedly(() => M_Maybe.Just(Quark.randomQuark().antiQuark()), fallAntiquarksNum)
+                  .concat(Ex.repeatedly(M_Maybe.Nothing, 12)).slice(0, 12)),
+                nextAntiquarks = this.antiQuarksNum - fallAntiquarksNum;
+              fallAntiquarks.forEach((aq, num) => {
+                nextBoard[num % 6][Math.floor(num / 6)] = aq;
+              });
+              return new Stage(nextBoard, this.nexts, [2, 0], Phase.Fall(0, 0), this.score, 0, nextAntiquarks + anti_quarks_num, 0);
+            } else {
+              return new Stage(nextBoard, Stage.nextHand(this.nexts), [2, 0], Phase.Move(), this.score, 0, this.antiQuarksNum + anti_quarks_num, 0);
+            }
+          } else {
+            return new Stage(nextBoard, this.nexts, [2, 0], Phase.Clear(hadrons, 20), this.score, this.chain, this.antiQuarksNum + anti_quarks_num, 0);
+          }
+        } else {
+          return new Stage(nextBoard, this.nexts, [2, 0], Phase.Fall(nextFallDistance, nextFallSpeed), this.score, this.chain, this.antiQuarksNum + anti_quarks_num, 0);
+        }
       }
-    })
-  }
-
-  /* isFill :: Stage -> (Int, Int) -> Bool */
-  isFill(x, y) {
-    return this.board[x][y].match({
-      nothing: () => false,
-      just: (_quark) => true
     });
   }
 
-  /* isLand :: Stage -> Bool */
-  isLand() {
-    return (this.hand[1] >= this.height - 2) || this.isFill(this.hand[0], Math.floor(this.hand[1] + 2)) || this.isFill(this.hand[0] + 1, Math.floor(this.hand[1] + 2));
+  /* showBoard :: Stage -> Painter2d -> (Int, Int) -> IO () */
+  showBoard(painter) {
+    let blanks = Stage.getBlanks(this.board),
+      isAboveBlanks = (col, row) => blanks.some(bl => bl[0] === col) && blanks.filter(bl => bl[0] === col)[0][1] > row;
+    return (x, y) => {
+      return painter.rect(x, y, STAGE_WIDTH * 32, (STAGE_HEIGHT - 2) * 32)
+        .clip(this.board.map((column, colNum) => column.map((q, rowNum) => q.match({
+          nothing: () => M_IO.unit(),
+          just: (quark) => {
+            return this.phase.match({
+              wait: (_) => {
+                return quark.show(painter, x + colNum * 32, y + (rowNum - 2) * 32);
+              },
+              move: () => {
+                return quark.show(painter, x + colNum * 32, y + (rowNum - 2) * 32);
+              },
+              turn: (_) => {
+                return quark.show(painter, x + colNum * 32, y + (rowNum - 2) * 32);
+              },
+              land: (_) => {
+                return quark.show(painter, x + colNum * 32, y + (rowNum - 2) * 32);
+              },
+              clear: (clearQuarks, counter) => {
+                let filteredClearQuark = clearQuarks.filter(h => h[0][0] === colNum && h[0][1] === rowNum);
+                if (filteredClearQuark.length === 0) {
+                  return quark.show(painter, x + colNum * 32, y + (rowNum - 2) * 32);
+                } else {
+                  let ease2 = Tween.ease(Tween.in(Tween.quad))(20 - counter, 1, -1, 20);
+                  return painter.globalAlpha(ease2)(quark.show(painter, x + colNum * 32, y + (rowNum - 2) * 32)).bind(_ =>
+                    filteredClearQuark.map(h => h[1].match({
+                      nothing: () => M_IO.unit(),
+                      just: (hadron) => painter.text(hadron.name, x + colNum * 32 + 16, y + (rowNum - 2) * 32 + 16, { font: 'Fira Sans', size: 28, align: 'center', baseline: 'middle' })
+                        .fill(Color.HSL(0, 0, 0).toHex())
+                    })).reduce((a, b) => a.bind(_ => b)));
+                }
+              },
+              fall: (fallDistance, _) => {
+                if (isAboveBlanks(colNum, rowNum)) {
+                  return quark.show(painter, x + colNum * 32, y + (rowNum - 2 + fallDistance) * 32);
+                } else {
+                  return quark.show(painter, x + colNum * 32, y + (rowNum - 2) * 32);
+                }
+              }
+            });
+          }
+        })).reduce((a, b) => a.bind(_ => b))).reduce((a, b) => a.bind(_ => b)));
+    }
+  }
+
+  /* showHand :: Stage -> Painter2d -> (Int, Int) -> IO () */
+  showHand(painter) {
+    return (x, y) => {
+      let defaultShow = () => painter.rect(x, y, STAGE_WIDTH * 32, (STAGE_HEIGHT - 2) * 32)
+        .clip(this.nexts[0].map((quark, num) => {
+          return quark.show(painter, x + 32 * (this.handPos[0] + (num % 2)), y + 32 * (this.handPos[1] + Math.floor(num / 2) - 2));
+        }).reduce((a, b) => a.bind(_ => b)));
+      return this.phase.match({
+        wait: (_) => M_IO.unit(),
+        move: defaultShow,
+        turn: (direction, counter) => {
+          let ease = Tween.ease(Tween.in(Tween.sinusoidal))(5 - counter, 0, Math.PI / 2, 5),
+            vectors = [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]];
+          return painter.rect(x, y, STAGE_WIDTH * 32, (STAGE_HEIGHT - 2) * 32)
+            .clip(this.nexts[0].map((quark, num) => {
+              return quark.show(painter, x + 32 * (this.handPos[0] + 0.5 + vectors[num][0] * Math.cos(ease) - direction * vectors[num][1] * Math.sin(ease)), y + 32 * (this.handPos[1] - 2 + 0.5 + direction * vectors[num][0] * Math.sin(ease) + vectors[num][1] * Math.cos(ease)));
+            }).reduce((a, b) => a.bind(_ => b)));
+        },
+        land: defaultShow,
+        clear: (_) => M_IO.unit(),
+        fall: (_) => M_IO.unit()
+      });
+    };
+  }
+
+  /* showNext :: Stage -> Painter2d -> (Int, Int) -> IO () */
+  showNext(painter) {
+    return (x, y) => {
+      return this.nexts[1].map((quark, num) => {
+        return quark.show(painter, x + 32 * (num % 2), y + 32 * Math.floor(num / 2));
+      }).reduce((a, b) => a.bind(_ => b));
+    }
   }
 }

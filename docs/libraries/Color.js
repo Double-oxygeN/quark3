@@ -78,6 +78,11 @@ class Color {
     return '#' + hex(this.r) + hex(this.g) + hex(this.b);
   }
 
+  /* toString :: Color -> String */
+  toString() {
+    return this.rgb.toString();
+  }
+
   get rgb() {
     return {
       r: this.r,
@@ -175,5 +180,36 @@ class Color {
   /* createRadialGrad :: Object -> (Int, Int, Int, Int, Int, Int) -> CanvasGradient */
   static createRadialGrad(colors) {
     return Color._gradientFunc('rad', colors);
+  }
+
+  /* plus :: Color -> ...Color -> Color */
+  plus(color, ...args) {
+    if (args.length === 0) {
+      return Color.RGB(this.r + color.r, this.g + color.g, this.b + color.b);
+    } else {
+      let plusColor = this.plus(color);
+      return plusColor.plus.apply(plusColor, args);
+    }
+  }
+
+  /* realColor :: Color -> Color */
+  realColor() {
+    let maxLight = Math.max(0xff, this.r, this.g, this.b);
+    return this.rate(0xff / maxLight);
+  }
+
+  /* rate :: Color -> Float -> Color */
+  rate(r) {
+    return Color.RGB(this.r * r, this.g * r, this.b * r);
+  }
+
+  /* equals :: Color -> Color -> Bool */
+  equals(color) {
+    return this.r === color.r && this.g === color.g && this.b === color.b;
+  }
+
+  /* complementary :: Color -> Color */
+  complementary() {
+    return Color.HSL((this.hsl.h + 180) % 360, this.hsl.s, this.hsl.l);
   }
 }

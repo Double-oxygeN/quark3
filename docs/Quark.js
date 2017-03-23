@@ -1,167 +1,227 @@
-const QUARK = Object.freeze({
-  u: 1,
-  d: 2,
-  s: 3,
-  c: 4,
-  b: 5,
-  t: 6,
-  au: -1,
-  ad: -2,
-  as: -3,
-  ac: -4,
-  ab: -5,
-  at: -6
-});
-
-const COLOR_CHARGE = Object.freeze({
-  r: 1,
-  g: 4,
-  y: 5,
-  b: 16,
-  m: 17,
-  c: 20
-});
-
 class Quark {
-  constructor(particle, color_charge) {
-    this.particle = particle;
-    this.colorCharge = color_charge;
+  constructor(data, color) {
+    Object.defineProperty(this, 'data', {
+      value: data,
+      writable: false,
+      enumerable: true,
+      configurable: false
+    });
+    Object.defineProperty(this, 'color', {
+      value: color,
+      writable: false,
+      enumerable: true,
+      configurable: false
+    });
   }
 
-  get mass() {
-    // unit: [MeV]
-    switch (this.particle) {
-    case QUARK.u:
-    case QUARK.au:
-      return 5;
-      break;
-    case QUARK.d:
-    case QUARK.ad:
-      return 9;
-      break;
-    case QUARK.c:
-    case QUARK.ac:
-      return 1300;
-      break;
-    case QUARK.s:
-    case QUARK.as:
-      return 170;
-      break;
-    case QUARK.t:
-    case QUARK.at:
-      return 175000;
-      break;
-    case QUARK.b:
-    case QUARK.ab:
-      return 4400;
-      break;
-    }
+  static Up(color) {
+    return new Quark((pattern) => pattern.up(color), color);
   }
 
-  /* getRandomQuark :: () -> Quark */
-  static getRandomQuark() {
-    let randomValue = Math.floor(Math.random() * 6 * 6 * 6 * 6),
-      randomColor = 1 << (2 * Math.floor(Math.random() * 3));
-    if (randomValue < 1 * 1 * 1 * 1) {
-      return new Quark(QUARK.t, randomColor);
-    } else if (randomValue < 2 * 2 * 2 * 2) {
-      return new Quark(QUARK.b, randomColor);
-    } else if (randomValue < 3 * 3 * 3 * 3) {
-      return new Quark(QUARK.c, randomColor);
-    } else if (randomValue < 4 * 4 * 4 * 4) {
-      return new Quark(QUARK.s, randomColor);
-    } else if (randomValue < 5 * 5 * 5 * 5) {
-      return new Quark(QUARK.d, randomColor);
-    } else {
-      return new Quark(QUARK.u, randomColor);
-    }
+  static AntiUp(color) {
+    return new Quark((pattern) => pattern.antiup(color), color);
   }
 
-  /* getRandomNext :: () -> [Quark] */
-  static getRandomNext() {
-    return Ex.repeatedly(Quark.getRandomQuark, 4);
+  static Down(color) {
+    return new Quark((pattern) => pattern.down(color), color);
+  }
+
+  static AntiDown(color) {
+    return new Quark((pattern) => pattern.antidown(color), color);
+  }
+
+  static Charm(color) {
+    return new Quark((pattern) => pattern.charm(color), color);
+  }
+
+  static AntiCharm(color) {
+    return new Quark((pattern) => pattern.anticharm(color), color);
+  }
+
+  static Strange(color) {
+    return new Quark((pattern) => pattern.strange(color), color);
+  }
+
+  static AntiStrange(color) {
+    return new Quark((pattern) => pattern.antistrange(color), color);
+  }
+
+  static Top(color) {
+    return new Quark((pattern) => pattern.top(color), color);
+  }
+
+  static AntiTop(color) {
+    return new Quark((pattern) => pattern.antitop(color), color);
+  }
+
+  static Bottom(color) {
+    return new Quark((pattern) => pattern.bottom(color), color);
+  }
+
+  static AntiBottom(color) {
+    return new Quark((pattern) => pattern.antibottom(color), color);
+  }
+
+  match(pattern) {
+    return this.data(pattern);
   }
 
   /* antiQuark :: Quark -> Quark */
   antiQuark() {
-    return new Quark(-this.particle, 21 - this.colorCharge);
+    return this.match({
+      up: (color) => Quark.AntiUp(color.complementary()),
+      antiup: (color) => Quark.Up(color.complementary()),
+      down: (color) => Quark.AntiDown(color.complementary()),
+      antidown: (color) => Quark.Down(color.complementary()),
+      charm: (color) => Quark.AntiCharm(color.complementary()),
+      anticharm: (color) => Quark.Charm(color.complementary()),
+      strange: (color) => Quark.AntiStrange(color.complementary()),
+      antistrange: (color) => Quark.Strange(color.complementary()),
+      top: (color) => Quark.AntiTop(color.complementary()),
+      antitop: (color) => Quark.Top(color.complementary()),
+      bottom: (color) => Quark.AntiBottom(color.complementary()),
+      antibottom: (color) => Quark.Bottom(color.complementary())
+    });
   }
 
-  static getColor(color_charge) {
-    switch (color_charge) {
-    case COLOR_CHARGE.r:
-      return Color.HSL(0, 80, 60);
-      break;
-    case COLOR_CHARGE.g:
-      return Color.HSL(120, 80, 60);
-      break;
-    case COLOR_CHARGE.b:
-      return Color.HSL(240, 80, 60);
-      break;
-    case COLOR_CHARGE.y:
-      return Color.HSL(60, 80, 60);
-      break;
-    case COLOR_CHARGE.m:
-      return Color.HSL(300, 80, 60);
-      break;
-    case COLOR_CHARGE.c:
-      return Color.HSL(180, 80, 60);
-      break;
-    }
+  /* mass :: Int */
+  get mass() {
+    return this.match({
+      up: (_) => 5,
+      antiup: (_) => 5,
+      down: (_) => 9,
+      antidown: (_) => 9,
+      charm: (_) => 1300,
+      anticharm: (_) => 1300,
+      strange: (_) => 170,
+      antistrange: (_) => 170,
+      top: (_) => 175000,
+      antitop: (_) => 175000,
+      bottom: (_) => 4400,
+      antibottom: (_) => 4400
+    });
   }
 
-  static getQuarkChar(particle) {
-    switch (particle) {
-    case QUARK.u:
-      return "u";
-      break;
-    case QUARK.au:
-      return "U";
-      break;
-    case QUARK.d:
-      return "d";
-      break;
-    case QUARK.ad:
-      return "D";
-      break;
-    case QUARK.c:
-      return "c";
-      break;
-    case QUARK.ac:
-      return "C";
-      break;
-    case QUARK.s:
-      return "s";
-      break;
-    case QUARK.as:
-      return "S";
-      break;
-    case QUARK.t:
-      return "t";
-      break;
-    case QUARK.at:
-      return "T";
-      break;
-    case QUARK.b:
-      return "b";
-      break;
-    case QUARK.ab:
-      return "B";
-      break;
-    }
+  /* toQuarkChar :: Quark -> Char */
+  toQuarkChar() {
+    return this.match({
+      up: (_) => 'u',
+      antiup: (_) => 'U',
+      down: (_) => 'd',
+      antidown: (_) => 'D',
+      charm: (_) => 'c',
+      anticharm: (_) => 'C',
+      strange: (_) => 's',
+      antistrange: (_) => 'S',
+      top: (_) => 't',
+      antitop: (_) => 'T',
+      bottom: (_) => 'b',
+      antibottom: (_) => 'B'
+    });
   }
 
-  /* show :: Quark -> (Painter2d, Int, Int) -> IO () */
-  show(painter, x, y) {
-    let quarkColor = Quark.getColor(this.colorCharge),
-      quarkChar = Quark.getQuarkChar(this.particle),
-      isAnti = this.particle < 0;
-    return painter.roundRect(x + 1, y + 1, 30, 30, 5).fill(isAnti ? Color.HSL(0, 0, 10).toHex() : Color.HSL(0, 0, 90).toHex()).bind(_ =>
-      painter.roundRect(x + 2, y + 2, 28, 28, 5).stroke(quarkColor.toHex(), { width: 4 })).bind(_ =>
-      painter.text(quarkChar, x + 16, y + 16, { font: 'Fira Sans', size: 28, align: 'center', baseline: 'middle' }).fill(quarkColor.toHex()));
+  /* toInt :: Quark -> Int */
+  toInt() {
+    return this.match({
+      up: (_) => 1,
+      antiup: (_) => 7,
+      down: (_) => 2,
+      antidown: (_) => 8,
+      charm: (_) => 4,
+      anticharm: (_) => 10,
+      strange: (_) => 3,
+      antistrange: (_) => 9,
+      top: (_) => 6,
+      antitop: (_) => 12,
+      bottom: (_) => 5,
+      antibottom: (_) => 11
+    });
   }
 
+  /* toString :: Quark -> String */
   toString() {
-    return "[Quark (" + this.particle.toString(10) + "," + this.colorCharge.toString(10) + ")]";
+    return '[Quark <' + this.toQuarkChar() + ',' + this.color.toString() + '>]';
+  }
+
+  /* randomQuark :: Quark */
+  static randomQuark() {
+    let randomNum = Math.floor(Math.random() * 6 * 6 * 6 * 6),
+      randomColorNum = Math.floor(Math.random() * 3),
+      randomColor = (randomColorNum === 0) ? Color.RGB(0xff, 0, 0) : ((randomColorNum === 1) ? Color.RGB(0, 0xff, 0) : Color.RGB(0, 0, 0xff)),
+      q;
+    if (randomNum < 1 * 1 * 1 * 1) {
+      q = Quark.Top(randomColor);
+    } else if (randomNum < 2 * 2 * 2 * 2) {
+      q = Quark.Bottom(randomColor);
+    } else if (randomNum < 3 * 3 * 3 * 3) {
+      q = Quark.Charm(randomColor);
+    } else if (randomNum < 4 * 4 * 4 * 4) {
+      q = Quark.Strange(randomColor);
+    } else if (randomNum < 5 * 5 * 5 * 5) {
+      q = Quark.Down(randomColor);
+    } else {
+      q = Quark.Up(randomColor);
+    }
+    return q;
+  }
+
+  /* randomNext :: [Quark] */
+  static randomNext() {
+    return Ex.repeatedly(Quark.randomQuark, 4);
+  }
+
+  /* compound :: ([Quark], Object) -> Maybe Hadron */
+  static compound(quarks, table) {
+    if (quarks.length === 2 || quarks.length === 3) {
+      let collider = (qs, color, contents) => {
+        if (qs.length === 0) {
+          if (color.realColor().toHex() === Color.RGB(0xff, 0xff, 0xff).toHex()) {
+            return M_Maybe.Just(Quark.quarksToHadron(contents, table));
+          } else {
+            return M_Maybe.Nothing();
+          }
+        } else {
+          return collider(qs.slice(1), color.plus(qs[0].color), contents.concat(qs[0]));
+        }
+      };
+      return collider(quarks, Color.RGB(0, 0, 0), []);
+    } else {
+      return M_Maybe.Nothing();
+    }
+  }
+
+  /* quarksToHadron :: ([Quark], Object) -> Hadron */
+  static quarksToHadron(quarks, table) {
+    let quarksString = quarks.sort((a, b) => a.toInt() - b.toInt()).map(q => q.toQuarkChar()).join(''),
+      hadronProperty = (quarksString in table) ? table[quarksString] : {
+        name: "?",
+        mass: quarks.map(q => q.mass).reduce((a, b) => a + b)
+      };
+    return new Hadron(hadronProperty.name, hadronProperty.mass);
+  }
+
+  /* isAnti :: Quark -> Bool */
+  isAnti() {
+    return this.match({
+      up: (_) => false,
+      antiup: (_) => true,
+      down: (_) => false,
+      antidown: (_) => true,
+      charm: (_) => false,
+      anticharm: (_) => true,
+      strange: (_) => false,
+      antistrange: (_) => true,
+      top: (_) => false,
+      antitop: (_) => true,
+      bottom: (_) => false,
+      antibottom: (_) => true
+    });
+  }
+
+  /* show :: Quark -> Painter2d -> IO () */
+  show(painter, x, y) {
+    return painter.roundRect(x + 1, y + 1, 30, 30, 5).fill(this.isAnti() ? Color.HSL(0, 0, 10).toHex() : Color.HSL(0, 0, 90).toHex()).bind(_ =>
+      painter.roundRect(x + 2, y + 2, 28, 28, 5).stroke(this.color.toHex(), { width: 4 })).bind(_ =>
+      painter.text(this.toQuarkChar(), x + 16, y + 16, { font: 'Fira Sans', size: 28, align: 'center', baseline: 'middle' }).fill(this.color.toHex()));
   }
 }
