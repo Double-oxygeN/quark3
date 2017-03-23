@@ -303,7 +303,7 @@ class Stage {
               }
             });
           });
-          plusScore *= clearQuarks.length * (this.chain + 1);
+          plusScore *= Math.ceil(clearQuarks.length / 3) * (this.chain + 1);
           return new Stage(nextBoard, this.nexts, [2, 0], Phase.Fall(0, 0), this.score + plusScore, this.chain + 1, this.antiQuarksNum + anti_quarks_num, Math.floor(plusScore / 5000));
         } else {
           return new Stage(this.board, this.nexts, [2, 0], Phase.Clear(clearQuarks, counter - 1), this.score, this.chain, this.antiQuarksNum + anti_quarks_num, 0);
